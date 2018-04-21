@@ -1,4 +1,4 @@
-let animationRequest = null
+let animationFrame = null
 
 const MANTA_RENDERER = {
   MANTA_COUNT: 3,
@@ -40,7 +40,7 @@ const MANTA_RENDERER = {
     }
   },
   render() {
-    animationRequest= requestAnimationFrame(this.render)
+    animationFrame = requestAnimationFrame(this.render)
 
     const gradient = this.context.createRadialGradient(
       this.width / 2,
@@ -60,11 +60,9 @@ const MANTA_RENDERER = {
     this.context.fillRect(0, 0, this.width, this.height)
 
     this.mantas.sort((manta1, manta2) => manta1.z - manta2.z)
-    for (let i = this.mantas.length - 1; i >= 0; i--) {
-      if (!this.mantas[i].render(this.context)) {
-        this.mantas.splice(i, 1)
-      }
-    }
+    this.mantas.forEach(manta => manta.render(this.context))
+    this.mantas = this.mantas.filter(manta => !manta.isOutside)
+
     if (this.interval-- == 0) {
       this.interval = this.ADD_INTERVAL
       this.mantas.push(new MANTA(this.width, this.height, this.context))
@@ -74,33 +72,33 @@ const MANTA_RENDERER = {
   },
 }
 
+const MANTA_COLOR = 'hsl(200, %s%, %l%)'
+const MANTA_ANGLE_RANGE = { min: -Math.PI / 8, max: Math.PI / 8 }
+const MANTA_INIT_SCALE = 0.3
+const MANTA_RANGE_Z = { min: 0, max: 30 }
+const MANTA_DELTA_ANGLE = Math.PI / 160
+const MANTA_VELOCITY = 2
+const MANTA_VERTICAL_THRESHOLD = 400
+
 class MANTA {
   constructor(width, height, context) {
-    this.COLOR = 'hsl(200, %s%, %l%)'
-    this.ANGLE_RANGE = { min: -Math.PI / 8, max: Math.PI / 8 }
-    this.INIT_SCALE = 0.3
-    this.RANGE_Z = { min: 0, max: 30 }
-    this.DELTA_ANGLE = Math.PI / 160
-    this.VELOCITY = 2
-    this.VERTICAL_THRESHOLD = 400
-
     this.width = width
     this.height = height
     this.init(context)
   }
   init(context) {
-    this.angle = this.getRandomValue(this.ANGLE_RANGE)
+    this.angle = this.getRandomValue(MANTA_ANGLE_RANGE)
     this.x = this.width / 2 + this.width / 3 * this.angle / Math.PI * 8
-    this.y = this.height + this.VERTICAL_THRESHOLD * this.INIT_SCALE
-    this.z = this.getRandomValue(this.RANGE_Z)
-    this.vx = -this.VELOCITY * Math.cos(this.angle + Math.PI / 2)
-    this.vy = -this.VELOCITY * Math.sin(this.angle + Math.PI / 2)
+    this.y = this.height + MANTA_VERTICAL_THRESHOLD * MANTA_INIT_SCALE
+    this.z = this.getRandomValue(MANTA_RANGE_Z)
+    this.vx = -MANTA_VELOCITY * Math.cos(this.angle + Math.PI / 2)
+    this.vy = -MANTA_VELOCITY * Math.sin(this.angle + Math.PI / 2)
     this.phi = Math.PI * 2 * Math.random()
     this.theta = Math.PI * 2 * Math.random()
     this.psi = Math.PI * 2 * Math.random()
 
-    const color = this.COLOR.replace('%s', 60)
-    const luminance = (20 * this.z / this.RANGE_Z.max) | 0
+    const color = MANTA_COLOR.replace('%s', 60)
+    const luminance = (20 * this.z / MANTA_RANGE_Z.max) | 0
 
     this.gradient = context.createLinearGradient(-140, 0, 140, 0)
     this.gradient.addColorStop(0, color.replace('%l', 10 + luminance))
@@ -108,20 +106,20 @@ class MANTA {
     this.gradient.addColorStop(0.5, color.replace('%l', 20 + luminance))
     this.gradient.addColorStop(0.9, color.replace('%l', 10 + luminance))
     this.gradient.addColorStop(1, color.replace('%l', 10 + luminance))
-    this.color = this.COLOR.replace('%s', 100).replace('%l', 5 + luminance)
+    this.color = MANTA_COLOR.replace('%s', 100).replace('%l', 5 + luminance)
   }
   getRandomValue(range) {
     return range.min + (range.max - range.min) * Math.random()
   }
   render(context) {
-    const height = this.height + this.VERTICAL_THRESHOLD
+    const height = this.height + MANTA_VERTICAL_THRESHOLD
     const scale =
-      this.INIT_SCALE +
-      (1 - this.INIT_SCALE) *
+      MANTA_INIT_SCALE +
+      (1 - MANTA_INIT_SCALE) *
         (height - this.y) /
         height *
-        (this.RANGE_Z.max - this.z) /
-        this.RANGE_Z.max *
+        (MANTA_RANGE_Z.max - this.z) /
+        MANTA_RANGE_Z.max *
         2
     const top = (Math.sin(this.phi) < 0 ? 50 : 60) * Math.sin(this.phi)
 
@@ -190,24 +188,23 @@ class MANTA {
 
     this.x += this.vx * scale
     this.y += this.vy * scale
-    this.phi += this.DELTA_ANGLE
+    this.phi += MANTA_DELTA_ANGLE
     this.phi %= Math.PI * 2
-    this.theta += this.DELTA_ANGLE
+    this.theta += MANTA_DELTA_ANGLE
     this.theta %= Math.PI * 2
-    this.psi += this.DELTA_ANGLE
+    this.psi += MANTA_DELTA_ANGLE
     this.psi %= Math.PI * 2
-
-    return this.y >= -this.VERTICAL_THRESHOLD
+    this.isOutside = this.y < -MANTA_VERTICAL_THRESHOLD
   }
 }
 
 window.addEventListener('load', () => MANTA_RENDERER.init())
 
 window.addEventListener('resize', () => {
-  if(animationRequest){
-    window.cancelAnimationFrame(animationRequest)
-    animationRequest=null
+  if (animationFrame) {
+    window.cancelAnimationFrame(animationFrame)
+    animationFrame = null
   }
   MANTA_RENDERER.destroy()
-   MANTA_RENDERER.init()
+  MANTA_RENDERER.init()
 })
