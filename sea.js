@@ -1,3 +1,5 @@
+let animationRequest = null
+
 const MANTA_RENDERER = {
   MANTA_COUNT: 3,
   ADD_INTERVAL: 30,
@@ -8,6 +10,9 @@ const MANTA_RENDERER = {
     this.reconstructMethod()
     this.createMantas()
     this.render()
+  },
+  destroy() {
+    this.$container.removeChild(this.$container.firstChild)
   },
   setParameters() {
     this.$container = document.getElementById('jsi-sea-container')
@@ -35,7 +40,7 @@ const MANTA_RENDERER = {
     }
   },
   render() {
-    requestAnimationFrame(this.render)
+    animationRequest= requestAnimationFrame(this.render)
 
     const gradient = this.context.createRadialGradient(
       this.width / 2,
@@ -196,4 +201,13 @@ class MANTA {
   }
 }
 
-MANTA_RENDERER.init()
+window.addEventListener('load', () => MANTA_RENDERER.init())
+
+window.addEventListener('resize', () => {
+  if(animationRequest){
+    window.cancelAnimationFrame(animationRequest)
+    animationRequest=null
+  }
+  MANTA_RENDERER.destroy()
+   MANTA_RENDERER.init()
+})
