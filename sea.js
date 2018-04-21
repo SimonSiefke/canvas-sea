@@ -14,12 +14,11 @@ const MANTA_RENDERER = {
     this.width = window.innerWidth
     this.height = window.innerHeight
 
-    this.context = $('<canvas />')
-      .attr({ width: this.width, height: this.height })
-      .appendTo(this.$container)
-      .get(0)
-      .getContext('2d')
-
+    const canvas = document.createElement('canvas')
+    canvas.setAttribute('width', this.width)
+    canvas.setAttribute('height', this.height)
+    this.$container.appendChild(canvas)
+    this.context = canvas.getContext('2d')
     this.interval = this.ADD_INTERVAL
     this.distance = Math.sqrt(
       Math.pow(this.width / 2, 2) + Math.pow(this.height / 2, 2)
@@ -31,7 +30,7 @@ const MANTA_RENDERER = {
     this.render = this.render.bind(this)
   },
   createMantas() {
-    for (var i = 0, length = this.MANTA_COUNT; i < length; i++) {
+    for (let i = 0; i < this.MANTA_COUNT; i++) {
       this.mantas.push(new MANTA(this.width, this.height, this.context))
     }
   },
@@ -39,24 +38,24 @@ const MANTA_RENDERER = {
     requestAnimationFrame(this.render)
 
     const gradient = this.context.createRadialGradient(
-        this.width / 2,
-        this.height / 2,
-        0,
-        this.width / 2,
-        this.height / 2,
-        this.distance
-      ),
-      rate = 1 + 0.2 * Math.sin(this.theta)
+      this.width / 2,
+      this.height / 2,
+      0,
+      this.width / 2,
+      this.height / 2,
+      this.distance
+    )
+    const rate = 1 + 0.2 * Math.sin(this.theta)
 
-    gradient.addColorStop(0, 'hsl(195, 80%, ' + 60 * rate + '%)')
-    gradient.addColorStop(0.2, 'hsl(195, 100%, ' + 40 * rate + '%)')
-    gradient.addColorStop(1, 'hsl(220, 100%, ' + 5 * rate + '%)')
+    gradient.addColorStop(0, `hsl(195, 80%, ${60 * rate}%)`)
+    gradient.addColorStop(0.2, `hsl(195, 100%, ${40 * rate}%)`)
+    gradient.addColorStop(1, `hsl(220, 100%, ${5 * rate}%)`)
 
     this.context.fillStyle = gradient
     this.context.fillRect(0, 0, this.width, this.height)
 
     this.mantas.sort((manta1, manta2) => manta1.z - manta2.z)
-    for (var i = this.mantas.length - 1; i >= 0; i--) {
+    for (let i = this.mantas.length - 1; i >= 0; i--) {
       if (!this.mantas[i].render(this.context)) {
         this.mantas.splice(i, 1)
       }
@@ -69,20 +68,21 @@ const MANTA_RENDERER = {
     this.theta %= Math.PI * 2
   },
 }
-const MANTA = function(width, height, context) {
-  this.width = width
-  this.height = height
-  this.init(context)
-}
-MANTA.prototype = {
-  COLOR: 'hsl(200, %s%, %l%)',
-  ANGLE_RANGE: { min: -Math.PI / 8, max: Math.PI / 8 },
-  INIT_SCALE: 0.3,
-  RANGE_Z: { min: 0, max: 30 },
-  DELTA_ANGLE: Math.PI / 160,
-  VELOCITY: 2,
-  VERTICAL_THRESHOLD: 400,
 
+class MANTA {
+  constructor(width, height, context) {
+    this.COLOR = 'hsl(200, %s%, %l%)'
+    this.ANGLE_RANGE = { min: -Math.PI / 8, max: Math.PI / 8 }
+    this.INIT_SCALE = 0.3
+    this.RANGE_Z = { min: 0, max: 30 }
+    this.DELTA_ANGLE = Math.PI / 160
+    this.VELOCITY = 2
+    this.VERTICAL_THRESHOLD = 400
+
+    this.width = width
+    this.height = height
+    this.init(context)
+  }
   init(context) {
     this.angle = this.getRandomValue(this.ANGLE_RANGE)
     this.x = this.width / 2 + this.width / 3 * this.angle / Math.PI * 8
@@ -94,8 +94,8 @@ MANTA.prototype = {
     this.theta = Math.PI * 2 * Math.random()
     this.psi = Math.PI * 2 * Math.random()
 
-    var color = this.COLOR.replace('%s', 60),
-      luminance = (20 * this.z / this.RANGE_Z.max) | 0
+    const color = this.COLOR.replace('%s', 60)
+    const luminance = (20 * this.z / this.RANGE_Z.max) | 0
 
     this.gradient = context.createLinearGradient(-140, 0, 140, 0)
     this.gradient.addColorStop(0, color.replace('%l', 10 + luminance))
@@ -104,21 +104,21 @@ MANTA.prototype = {
     this.gradient.addColorStop(0.9, color.replace('%l', 10 + luminance))
     this.gradient.addColorStop(1, color.replace('%l', 10 + luminance))
     this.color = this.COLOR.replace('%s', 100).replace('%l', 5 + luminance)
-  },
+  }
   getRandomValue(range) {
     return range.min + (range.max - range.min) * Math.random()
-  },
+  }
   render(context) {
-    var height = this.height + this.VERTICAL_THRESHOLD,
-      scale =
-        this.INIT_SCALE +
-        (1 - this.INIT_SCALE) *
-          (height - this.y) /
-          height *
-          (this.RANGE_Z.max - this.z) /
-          this.RANGE_Z.max *
-          2,
-      top = (Math.sin(this.phi) < 0 ? 50 : 60) * Math.sin(this.phi)
+    const height = this.height + this.VERTICAL_THRESHOLD
+    const scale =
+      this.INIT_SCALE +
+      (1 - this.INIT_SCALE) *
+        (height - this.y) /
+        height *
+        (this.RANGE_Z.max - this.z) /
+        this.RANGE_Z.max *
+        2
+    const top = (Math.sin(this.phi) < 0 ? 50 : 60) * Math.sin(this.phi)
 
     context.save()
     context.translate(this.x, this.y)
@@ -173,8 +173,8 @@ MANTA.prototype = {
     context.strokeStyle = this.color
     context.beginPath()
 
-    for (var i = 0; i < 5; i++) {
-      var y = -10 + i * 8 + (1 - Math.sin(this.phi)) * 3
+    for (let i = 0; i < 5; i++) {
+      const y = -10 + i * 8 + (1 - Math.sin(this.phi)) * 3
       context.moveTo(10, -20 + i * 8)
       context.quadraticCurveTo(20, -15 + i * 8, 30, y)
       context.moveTo(-10, -20 + i * 8)
@@ -193,7 +193,7 @@ MANTA.prototype = {
     this.psi %= Math.PI * 2
 
     return this.y >= -this.VERTICAL_THRESHOLD
-  },
+  }
 }
 
-window.addEventListener('load', MANTA_RENDERER.init())
+MANTA_RENDERER.init()
